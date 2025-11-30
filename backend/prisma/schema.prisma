@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  MANAGER
+}
+
+enum RequestStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  managerId    Int?
+  manager      User?    @relation("ManagerEmployees", fields: [managerId], references: [id])
+  employees    User[]   @relation("ManagerEmployees")
+  requestsCreated Request[] @relation("CreatedBy")
+  requestsAssigned Request[] @relation("AssignedTo")
+  approvals    Request[] @relation("ApprovedBy")
+}
+
+model Request {
+  id            Int           @id @default(autoincrement())
+  title         String
+  description   String
+  status        RequestStatus @default(PENDING_APPROVAL)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  rejectionReason String?
+  createdById   Int
+  assignedToId  Int
+  approvedById  Int?
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
+  closedAt      DateTime?
+  createdBy     User          @relation("CreatedBy", fields: [createdById], references: [id])
+  assignedTo    User          @relation("AssignedTo", fields: [assignedToId], references: [id])
+  approvedBy    User?         @relation("ApprovedBy", fields: [approvedById], references: [id])
+
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([status])
+}
